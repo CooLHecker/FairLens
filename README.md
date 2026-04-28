@@ -45,60 +45,7 @@ Open: `http://localhost:8501`
 
 Backend docs: `http://localhost:8000/docs`
 
-## Push to GitHub
 
-```bash
-git init
-git add .
-git commit -m "Prepare FairLens for deployment"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
-git push -u origin main
-```
-
-## Deploy Both Frontend + Backend on Render
-
-This repository is already prepared for a **two-service Render deployment**.
-
-### Backend service
-- Runtime: Python
-- Build command: `pip install -r requirements.txt`
-- Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-- Required env vars:
-  - `GEMINI_API_KEY` = your Google Gemini API key (optional, but needed for AI narrative in reports)
-  - `FAIRLENS_CORS_ORIGINS` = your frontend domain after deploy, for example `https://fairlens-frontend.onrender.com`
-
-### Frontend service
-- Runtime: Python
-- Build command: `pip install -r requirements.txt`
-- Start command: `streamlit run streamlit_app.py --server.port $PORT --server.address 0.0.0.0`
-- Required env vars:
-  - `FAIRLENS_BACKEND_URL` = your deployed backend URL, for example `https://fairlens-backend.onrender.com`
-
-### Render deployment steps
-1. Push this repo to GitHub.
-2. Log in to Render and choose **New + → Blueprint**.
-3. Select this GitHub repository. Render will detect `render.yaml`.
-4. Create both services.
-5. Open the backend service and set: 
-   - `GEMINI_API_KEY`
-   - `FAIRLENS_CORS_ORIGINS` to your frontend URL
-6. Open the frontend service and set:
-   - `FAIRLENS_BACKEND_URL` to your backend URL
-7. Redeploy both services after updating env vars.
-8. Test:
-   - Backend health: `https://YOUR-BACKEND/api/v1/health`
-   - Frontend app: `https://YOUR-FRONTEND`
-
-## Manual Deployment Without Blueprint
-
-If you do not want to use `render.yaml`, create two separate Render web services from the same repo using the same commands above.
-
-## Notes
-
-- Uploaded files and generated PDF reports are stored on ephemeral disk in hosted environments, which is fine for demo usage but not for long-term storage.
-- For production persistence, connect object storage (for example AWS S3, Cloudinary, or Supabase Storage) for uploads and reports.
-- `FAIRLENS_CORS_ORIGINS` supports a comma-separated list of allowed frontend domains.
 
 ## Uploading Data
 
