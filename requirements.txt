@@ -1,0 +1,16 @@
+# Backend
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+aiofiles>=23.0.0
+pandas>=2.0.0
+numpy>=1.24.0
+scipy>=1.10.0
+reportlab>=4.0.0
+google-genai>=1.0.0
+
+# Frontend
+streamlit>=1.35.0
+requests>=2.31.0
+plotly>=5.18.0
+python-dotenv>=1.0.1

@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+.venv/
+venv/
+env/
+
+# Environment
+.env
+.streamlit/secrets.toml
+
+# App runtime artifacts
+uploads/*
+!uploads/.gitkeep
+reports/*
+!reports/.gitkeep
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
