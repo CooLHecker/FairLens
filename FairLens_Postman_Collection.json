@@ -1,1 +1,387 @@
-deleted
+{
+  "info": {
+    "name": "FairLens — HR Bias Detection API",
+    "description": "Complete Postman collection for the FairLens bias auditing API.\n\nBefore using:\n1. Start server: uvicorn main:app --reload --port 8000\n2. Generate sample data: python generate_samples.py\n3. Set the {{base_url}} variable to http://localhost:8000",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url",   "value": "http://localhost:8000",  "type": "string" },
+    { "key": "gemini_key", "value": "",                       "type": "string",
+      "description": "Optional — set your Gemini API key here for AI narrative in full audit" },
+    { "key": "report_id",  "value": "",                       "type": "string",
+      "description": "Auto-populated after running full-audit" }
+  ],
+  "item": [
+    {
+      "name": "🟢 Health & Root",
+      "item": [
+        {
+          "name": "Root — Service Info",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/",
+            "description": "Returns service name, version and all available endpoint URLs."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has service field', () => {",
+              "  const j = pm.response.json();",
+              "  pm.expect(j.service).to.include('FairLens');",
+              "});"
+            ]}
+          }]
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/health",
+            "description": "Returns {status: ok} if the API is running."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('OK status', () => pm.expect(pm.response.json().status).to.equal('ok'));"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "📋 Module 1 — Hiring Bias",
+      "item": [
+        {
+          "name": "Analyse Hiring CSV",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/analyse/hiring",
+            "description": "Upload a hiring decisions CSV. Returns per-attribute bias analysis with fairness score.\n\nRequired columns:\n- candidate_id, gender, caste, location, college_tier\n- education_level, years_experience, cgpa, selected\n\nOptional (auto-computed if missing):\n- skills_score, is_qualified",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "./sample_data/hiring.csv",
+                  "description": "CSV file with hiring data"
+                }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Has score', () => { pm.expect(j.score).to.be.a('number'); pm.expect(j.score).to.be.within(0, 100); });",
+              "pm.test('Has analyses', () => pm.expect(j.analyses).to.be.an('array').and.not.empty);",
+              "pm.test('Has breakdown', () => pm.expect(j.breakdown).to.be.an('object'));",
+              "pm.test('Has summary', () => pm.expect(j.summary).to.be.an('object'));",
+              "console.log('Hiring Fairness Score:', j.score + '/100');"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "🤖 Module 2 — ML Model Bias",
+      "item": [
+        {
+          "name": "Analyse ML Predictions",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/analyse/ml-model",
+            "description": "Upload ML model predictions CSV. Checks for disparate impact, equalized odds gaps, and group-level precision/recall differences.\n\nRequired columns:\n- candidate_id, gender, caste, location, college_tier, education_level\n- actual_label (ground truth 0/1)\n- predicted_label (model decision 0/1)\n- predicted_probability (0.0–1.0, optional)",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "./sample_data/ml_predictions.csv",
+                  "description": "CSV with model predictions"
+                }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Has score', () => pm.expect(j.score).to.be.within(0, 100));",
+              "pm.test('Has accuracy', () => pm.expect(j.overall_accuracy).to.be.within(0, 1));",
+              "pm.test('Has analyses', () => pm.expect(j.analyses).to.be.an('array'));",
+              "console.log('ML Model Score:', j.score + '/100, Accuracy:', (j.overall_accuracy*100).toFixed(1)+'%');"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "👔 Module 3 — Manager Fairness",
+      "item": [
+        {
+          "name": "Analyse Manager Data",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/analyse/manager",
+            "description": "Upload manager/interviewer decision data. Identifies individual managers with biased selection patterns.\n\nRequired columns:\n- candidate_id, manager_id, selected\n\nOptional:\n- gender, caste, location, college_tier, education_level\n- interview_score (0–100)",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "./sample_data/manager.csv",
+                  "description": "CSV with manager decisions"
+                }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Has score', () => pm.expect(j.score).to.be.within(0, 100));",
+              "pm.test('Has managers', () => pm.expect(j.total_managers).to.be.a('number'));",
+              "console.log('Manager Score:', j.score + '/100');",
+              "console.log('Flagged managers:', j.flagged_managers, 'of', j.total_managers);"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "🗓️ Module 4 — Leave & Task Fairness",
+      "item": [
+        {
+          "name": "Analyse Leave Only",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/analyse/leave-task",
+            "description": "Upload leave approval data only.\n\nRequired columns:\n- employee_id, approved, days_requested, days_approved\n\nOptional demographic columns:\n- gender, caste, location, department, leave_type",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "leave_file",
+                  "type": "file",
+                  "src": "./sample_data/leave.csv",
+                  "description": "Leave approvals CSV"
+                }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Has score', () => pm.expect(j.score).to.be.within(0, 100));",
+              "pm.test('Has leave sub-result', () => pm.expect(j.leave).to.be.an('object'));",
+              "console.log('Leave Score:', j.score + '/100');"
+            ]}
+          }]
+        },
+        {
+          "name": "Analyse Task Only",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/analyse/leave-task",
+            "description": "Upload task assignment data only.\n\nRequired columns:\n- employee_id, task_type OR avg_task_complexity\n\nOptional:\n- gender, caste, location, department, promotion_track",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "task_file",
+                  "type": "file",
+                  "src": "./sample_data/task.csv",
+                  "description": "Task assignment CSV"
+                }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Has score', () => pm.expect(j.score).to.be.within(0, 100));",
+              "console.log('Task Score:', j.score + '/100');"
+            ]}
+          }]
+        },
+        {
+          "name": "Analyse Leave + Task Combined",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/analyse/leave-task",
+            "description": "Upload both leave and task files for a combined score.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "leave_file", "type": "file", "src": "./sample_data/leave.csv" },
+                { "key": "task_file",  "type": "file", "src": "./sample_data/task.csv"  }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Has combined score', () => pm.expect(j.score).to.be.within(0, 100));",
+              "pm.test('Has both sub-results', () => { pm.expect(j.leave).to.be.an('object'); pm.expect(j.task).to.be.an('object'); });",
+              "console.log('Combined Leave+Task Score:', j.score + '/100');"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "📄 Full Audit — PDF Report",
+      "item": [
+        {
+          "name": "Full Audit (All Modules) → PDF",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/analyse/full-audit",
+            "description": "Runs all 4 modules and returns a downloadable PDF bias audit report.\n\nThe PDF includes:\n- Overall fairness score (0–100)\n- Per-module breakdown\n- Statistical tables with disparate impact ratios\n- Gemini AI narrative (if API key provided)\n- Methodology page\n\nResponse headers:\n- X-Overall-Score\n- X-Hiring-Score\n- X-Report-ID  ← use this to re-download",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "hiring_file",  "type": "file", "src": "./sample_data/hiring.csv",
+                  "description": "REQUIRED" },
+                { "key": "ml_file",      "type": "file", "src": "./sample_data/ml_predictions.csv",
+                  "description": "optional" },
+                { "key": "manager_file", "type": "file", "src": "./sample_data/manager.csv",
+                  "description": "optional" },
+                { "key": "leave_file",   "type": "file", "src": "./sample_data/leave.csv",
+                  "description": "optional" },
+                { "key": "task_file",    "type": "file", "src": "./sample_data/task.csv",
+                  "description": "optional" },
+                { "key": "gemini_key",   "value": "{{gemini_key}}",
+                  "type": "text",
+                  "description": "Optional Gemini API key for AI narrative" }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Is PDF', () => pm.expect(pm.response.headers.get('content-type')).to.equal('application/pdf'));",
+              "pm.test('Has score header', () => pm.expect(pm.response.headers.get('X-Overall-Score')).to.exist);",
+              "pm.test('Has report ID header', () => pm.expect(pm.response.headers.get('X-Report-ID')).to.exist);",
+              "const reportId = pm.response.headers.get('X-Report-ID');",
+              "pm.collectionVariables.set('report_id', reportId);",
+              "console.log('Overall Score:', pm.response.headers.get('X-Overall-Score') + '/100');",
+              "console.log('Report ID:', reportId, '← saved to {{report_id}} variable');"
+            ]}
+          }]
+        },
+        {
+          "name": "Full Audit — Hiring Only (minimal)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/analyse/full-audit",
+            "description": "Minimum viable audit — only the hiring CSV is required.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "hiring_file", "type": "file", "src": "./sample_data/hiring.csv" }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Is PDF', () => pm.expect(pm.response.headers.get('content-type')).to.equal('application/pdf'));",
+              "console.log('Minimal audit PDF size:', pm.response.responseSize, 'bytes');"
+            ]}
+          }]
+        },
+        {
+          "name": "Download Previous Report",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/report/{{report_id}}",
+            "description": "Re-download a previously generated report using its ID.\nThe {{report_id}} variable is auto-populated when you run the Full Audit request above."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Is PDF', () => pm.expect(pm.response.headers.get('content-type')).to.equal('application/pdf'));"
+            ]}
+          }]
+        },
+        {
+          "name": "Download Missing Report (404)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/report/nonexistent999",
+            "description": "Should return 404 for a report ID that does not exist."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "⚠️ Error Cases",
+      "item": [
+        {
+          "name": "Hiring — Missing Required Columns",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/analyse/hiring",
+            "description": "Upload a CSV missing required columns — should return an error.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "./sample_data/leave.csv",
+                  "description": "Wrong file — leave CSV sent to hiring endpoint"
+                }
+              ]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Returns error status', () => pm.expect(pm.response.code).to.be.oneOf([400, 422, 500]));"
+            ]}
+          }]
+        },
+        {
+          "name": "Leave/Task — No Files Provided",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/analyse/leave-task",
+            "description": "Should return 422 when neither leave nor task file is uploaded.",
+            "body": { "mode": "formdata", "formdata": [] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Returns 422', () => pm.response.to.have.status(422));"
+            ]}
+          }]
+        }
+      ]
+    }
+  ]
+}
