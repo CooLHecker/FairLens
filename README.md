@@ -16,7 +16,6 @@ Premium Streamlit frontend + FastAPI backend for detecting workplace bias.
 ### 1. Install dependencies
 ```bash
 pip install -r requirements.txt
-```
 
 ### 2. Create a local env file (optional but recommended)
 ```bash
@@ -29,6 +28,7 @@ Set these values as needed:
 GEMINI_API_KEY=your_gemini_api_key_here
 FAIRLENS_BACKEND_URL=http://localhost:8000
 FAIRLENS_CORS_ORIGINS=*
+Gemini API key secure in venv
 ```
 
 ### 3. Start the FastAPI backend
@@ -60,6 +60,6 @@ Backend docs: `http://localhost:8000/docs`
 Sample data is available in `sample_data/`.
 
 ## Fairness Score Scale
-- **75–100**: LOW BIAS ✅
+- **75–100**: LOW BIAS ✅ 
 - **50–74**: MODERATE BIAS ⚠️
 - **0–49**: HIGH BIAS ❌
